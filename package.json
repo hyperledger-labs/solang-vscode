@@ -2,9 +2,10 @@
 	"name": "slang-ex",
 	"displayName": "slang_ex",
 	"description": "Solidity extension",
+	"publisher": "vscode",
 	"version": "0.0.1",
 	"engines": {
-		"vscode": "^1.45.0"
+		"vscode": "^1.43.0"
 	},
 	"categories": [
 		"Other"
@@ -14,8 +15,11 @@
 		"onCommand:slang-ex.helloWorld",
 		"onCommand:slang-ex.sendfirstcode"
 	],
-	"main": "./out/extension.js",
+	"main": "./out/client/extension.js",
 	"contributes": {
+		"capabilities": {
+			"hoverProvider": "true"
+		},
 		"languages": [
 			{
 				"id": "solidity",
@@ -36,7 +40,11 @@
 			},
 			{
 				"command": "slang-ex.sendfirstcode",
-				"title": "Sending my first message from client"
+				"title": "Send first code"
+			},
+			{
+				"command": "slang-ex.applyedit",
+				"title": "Apply edit"
 			}
 		],
 		"snippets": [
@@ -66,17 +74,16 @@
 		"vscode-languageserver": "^6.1.1"
 	},
 	"devDependencies": {
-		"@types/vscode": "^1.45.0",
 		"@types/glob": "^7.1.1",
 		"@types/mocha": "^7.0.2",
-		"@types/node": "^13.11.0",
-		"eslint": "^6.8.0",
-		"@typescript-eslint/parser": "^2.30.0",
+		"@types/node": "^12.12.0",
+		"@types/vscode": "^1.43.0",
 		"@typescript-eslint/eslint-plugin": "^2.30.0",
+		"@typescript-eslint/parser": "^2.30.0",
+		"eslint": "^6.8.0",
 		"glob": "^7.1.6",
 		"mocha": "^7.1.2",
 		"typescript": "^3.8.3",
-		"vscode-test": "^1.3.0",
-		"vscode": "^1.1.36"
+		"vscode-test": "^1.3.0"
 	}
 }
