@@ -7,9 +7,9 @@ import * as path from 'path';
 import * as cp from 'child_process';
 import * as rpc from 'vscode-jsonrpc';
 
-import { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind, InitializeRequest, InitializeParams} from 'vscode-languageclient';
+import { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind, InitializeRequest, InitializeParams } from 'vscode-languageclient';
 
-import { workspace, WorkspaceFolder} from 'vscode';
+import { workspace, WorkspaceFolder } from 'vscode';
 import { create } from 'domain';
 import { createConnection } from 'net';
 
@@ -40,8 +40,6 @@ export function activate(context: vscode.ExtensionContext) {
 
 	context.subscriptions.push(disposable);
 
-	let childprocess = cp.spawn('node',[context.asAbsolutePath('dummy.js')]);
-
 	let connection = rpc.createMessageConnection(
 		new rpc.StreamMessageReader(process.stdout),
 		new rpc.StreamMessageWriter(process.stdin)
@@ -53,7 +51,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	connection.listen();
 
-	const serverModule = context.asAbsolutePath(path.join('server', 'out', 'server.js'));
+	const serverModule = context.asAbsolutePath(path.join('out', 'server', 'server.js'));
 	console.log(serverModule);
 	const serverOptions: ServerOptions = {
 		debug: {
@@ -61,21 +59,21 @@ export function activate(context: vscode.ExtensionContext) {
 			options: {
 				execArgv: ['--nolazy', '--inspect=6009'],
 			},
-			transport: TransportKind.socket,
+			transport: TransportKind.ipc,
 		},
 		run: {
 			module: serverModule,
-			transport: TransportKind.socket,
+			transport: TransportKind.ipc,
 		}
 	};
 
 	const clientoptions: LanguageClientOptions = {
 		documentSelector: [
-			{	language: 'solidity', scheme: 'file' },
-			{	language: 'solidity', scheme: 'untitled' },
+			{ language: 'solidity', scheme: 'file' },
+			{ language: 'solidity', scheme: 'untitled' },
 		]
 	};
-	
+
 	const init: InitializeParams = {
 		rootUri: null,
 		processId: 1,
@@ -85,7 +83,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	let disposable1 = vscode.commands.registerCommand('slang-ex.sendfirstcode', () => {
 		connection.sendNotification('something interesting');
-		connection.sendRequest(InitializeRequest.type, init );
+		connection.sendRequest(InitializeRequest.type, init);
 		console.log(connection);
 		console.log('sent request\n');
 	});
@@ -95,10 +93,10 @@ export function activate(context: vscode.ExtensionContext) {
 
 	//if(ws) {
 	let clientdispos = new LanguageClient(
-			'solidity',
-			'Soliditiy language server extension',
-			serverOptions,
-			clientoptions).start();
+		'solidity',
+		'Soliditiy language server extension',
+		serverOptions,
+		clientoptions).start();
 	//}
 	context.subscriptions.push(clientdispos);
 
@@ -106,4 +104,4 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 // this method is called when your extension is deactivated
-export function deactivate() {}
+export function deactivate() { }
