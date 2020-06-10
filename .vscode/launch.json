@@ -5,6 +5,8 @@
 {
 	"version": "0.2.0",
 	"configurations": [
+
+
 		{
 			"name": "Run Extension",
 			"type": "extensionHost",
@@ -49,7 +51,7 @@
 			"name": "Attach to Server 29199",
 			"address": "localhost",
 			"protocol": "inspector",
-			"port": 29299,
+			"port": 6009,
 			"sourceMaps": true,
 			"outFiles": ["${workspaceRoot}/server/out/**/*.js"]
 		}

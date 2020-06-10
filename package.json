@@ -14,7 +14,7 @@
 		"onCommand:slang-ex.helloWorld",
 		"onCommand:slang-ex.sendfirstcode"
 	],
-	"main": "./out/extension.js",
+	"main": "./out/client/extension.js",
 	"contributes": {
 		"languages": [
 			{
