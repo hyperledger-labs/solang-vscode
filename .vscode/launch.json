@@ -31,6 +31,27 @@
 				"${workspaceFolder}/out/test/**/*.js"
 			],
 			"preLaunchTask": "${defaultBuildTask}"
+		},
+		{
+			"type": "extensionHost",
+			"request": "launch",
+			"name": "Launch Client",
+			"runtimeExecutable": "${execPath}",
+			"args": ["--extensionDevelopmentPath=${workspaceRoot}" ],
+			"stopOnEntry": false,
+			"sourceMaps": true,
+			"outFiles": ["${workspaceRoot}/client/out/**/*.js"],
+			"preLaunchTask": "npm: watch"
+		},
+		{
+			"type": "node",
+			"request": "attach",
+			"name": "Attach to Server 29199",
+			"address": "localhost",
+			"protocol": "inspector",
+			"port": 29299,
+			"sourceMaps": true,
+			"outFiles": ["${workspaceRoot}/server/out/**/*.js"]
 		}
 	]
 }

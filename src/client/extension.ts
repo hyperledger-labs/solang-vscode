@@ -13,6 +13,8 @@ import { workspace, WorkspaceFolder} from 'vscode';
 import { create } from 'domain';
 import { createConnection } from 'net';
 
+let diagcollect: vscode.DiagnosticCollection;
+
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
@@ -21,6 +23,10 @@ export function activate(context: vscode.ExtensionContext) {
 	// Use the console to output diagnostic information (console.log) and errors (console.error)
 	// This line of code will only be executed once when your extension is activated
 	console.log('Congratulations, your extension "slang-ex" is now active!');
+
+	diagcollect = vscode.languages.createDiagnosticCollection('solidity');
+
+	context.subscriptions.push(diagcollect);
 
 	// The command has been defined in the package.json file
 	// Now provide the implementation of the command with registerCommand
@@ -34,21 +40,21 @@ export function activate(context: vscode.ExtensionContext) {
 
 	context.subscriptions.push(disposable);
 
-	let childprocess = cp.spawn('node',[path.join(__dirname, 'dummy.js')]);
+	let childprocess = cp.spawn('node',[context.asAbsolutePath('dummy.js')]);
 
 	let connection = rpc.createMessageConnection(
-		//new rpc.StreamMessageReader(process.stdout),
-		//new rpc.StreamMessageWriter(process.stdin)
-		new rpc.SocketMessageReader(),
-		new rpc.SocketMessageWriter()
+		new rpc.StreamMessageReader(process.stdout),
+		new rpc.StreamMessageWriter(process.stdin)
+		//new rpc.SocketMessageReader(),
+		//new rpc.SocketMessageWriter()
 	);
 
 	//connection = createConnection(rpc.StreamMessageReader(), rpc.StreamMessageWriter(),);
 
 	connection.listen();
 
-	const serverModule = path.join(__dirname, 'server/server.js');
-	console.log(__dirname);
+	const serverModule = context.asAbsolutePath(path.join('server', 'out', 'server.js'));
+	console.log(serverModule);
 	const serverOptions: ServerOptions = {
 		debug: {
 			module: serverModule,
@@ -70,7 +76,6 @@ export function activate(context: vscode.ExtensionContext) {
 		]
 	};
 	
-
 	const init: InitializeParams = {
 		rootUri: null,
 		processId: 1,
@@ -81,21 +86,22 @@ export function activate(context: vscode.ExtensionContext) {
 	let disposable1 = vscode.commands.registerCommand('slang-ex.sendfirstcode', () => {
 		connection.sendNotification('something interesting');
 		connection.sendRequest(InitializeRequest.type, init );
+		console.log(connection);
 		console.log('sent request\n');
 	});
 	context.subscriptions.push(disposable1);
 
-
 	//let clientdispos;
 
 	//if(ws) {
-	let	clientdispos = new LanguageClient(
+	let clientdispos = new LanguageClient(
 			'solidity',
 			'Soliditiy language server extension',
 			serverOptions,
 			clientoptions).start();
 	//}
 	context.subscriptions.push(clientdispos);
+
 
 }
 
