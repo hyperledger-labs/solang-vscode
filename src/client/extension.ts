@@ -7,7 +7,7 @@ import * as path from 'path';
 import * as cp from 'child_process';
 import * as rpc from 'vscode-jsonrpc';
 
-import { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind, InitializeRequest, InitializeParams } from 'vscode-languageclient';
+import { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind, InitializeRequest, InitializeParams, DefinitionRequest, Executable } from 'vscode-languageclient';
 
 import { workspace, WorkspaceFolder } from 'vscode';
 import { create } from 'domain';
@@ -51,8 +51,10 @@ export function activate(context: vscode.ExtensionContext) {
 
 	connection.listen();
 
-	const serverModule = context.asAbsolutePath(path.join('out', 'server', 'server.js'));
-	console.log(serverModule);
+	//const serverModule = context.asAbsolutePath(path.join('out', 'server', 'server.js'));
+	//console.log(serverModule);
+	
+	/*
 	const serverOptions: ServerOptions = {
 		debug: {
 			module: serverModule,
@@ -63,9 +65,23 @@ export function activate(context: vscode.ExtensionContext) {
 		},
 		run: {
 			module: serverModule,
+
 			transport: TransportKind.ipc,
 		}
 	};
+	*/
+
+	const sop: Executable = {
+		command: 'cargo run',
+		args: ['--example', 'goto_def'],
+		options: {
+			cwd: '/home/hyperion/intern/hyperledger/sls/practice/lsp-server',
+			shell: true
+		},
+		//transport: TransportKind.stdio
+	};
+
+	const serverOptions: ServerOptions = sop;
 
 	const clientoptions: LanguageClientOptions = {
 		documentSelector: [
@@ -81,26 +97,32 @@ export function activate(context: vscode.ExtensionContext) {
 		workspaceFolders: null,
 	};
 
+	const params = {"textDocument": {"uri": "file://temp"},
+                 "position": {"line": 1, "character": 1}
+	};
+
+
+	//if(ws) {
+		let clientdispos = new LanguageClient(
+			'solidity',
+			'Soliditiy language server extension',
+			serverOptions,
+			clientoptions).start();
+		//}
+		context.subscriptions.push(clientdispos);
+	
+
 	let disposable1 = vscode.commands.registerCommand('slang-ex.sendfirstcode', () => {
-		connection.sendNotification('something interesting');
-		connection.sendRequest(InitializeRequest.type, init);
+		//connection.sendNotification('something interesting');
+		//connection.sendRequest(InitializeRequest.type, init);
+		console.log('running the command');
+		connection.sendRequest(DefinitionRequest.type, params);
 		console.log(connection);
 		console.log('sent request\n');
 	});
 	context.subscriptions.push(disposable1);
 
 	//let clientdispos;
-
-	//if(ws) {
-	let clientdispos = new LanguageClient(
-		'solidity',
-		'Soliditiy language server extension',
-		serverOptions,
-		clientoptions).start();
-	//}
-	context.subscriptions.push(clientdispos);
-
-
 }
 
 // this method is called when your extension is deactivated
