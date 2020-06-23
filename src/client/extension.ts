@@ -73,12 +73,11 @@ export function activate(context: vscode.ExtensionContext) {
 
 	const sop: Executable = {
 		command: 'cargo run',
-		args: ['--example', 'goto_def'],
+		args: ['--example', 'server_eg'],
 		options: {
-			cwd: '/home/hyperion/intern/hyperledger/sls/practice/lsp-server',
-			shell: true
-		},
-		//transport: TransportKind.stdio
+			cwd: './tower-lsp',
+			shell:true
+		}
 	};
 
 	const serverOptions: ServerOptions = sop;
@@ -121,6 +120,35 @@ export function activate(context: vscode.ExtensionContext) {
 		console.log('sent request\n');
 	});
 	context.subscriptions.push(disposable1);
+
+	let disposable3 = vscode.languages.registerHoverProvider('solidity', {
+		provideHover(document, position, token) {
+			const range = document.getWordRangeAtPosition(position);
+			const word = document.getText(range);
+
+			if(true){//word === "pragma") {
+				return new vscode.Hover({
+					language: "Solidity",
+					value: "Hover is working now"
+				});
+			}
+		}
+	});
+
+	/*
+	let disposable4 = vscode.commands.registerCommand('custom.notification', () => {
+		//connection.sendNotification('something interesting');
+		//connection.sendRequest(InitializeRequest.type, init);
+		console.log('running the command');
+		connection.sendRequest(DefinitionRequest.type, params);
+		console.log(connection);
+		console.log('sent request\n');
+	});
+	context.subscriptions.push(disposable4);
+	*/
+	
+
+	context.subscriptions.push(disposable3);
 
 	//let clientdispos;
 }
