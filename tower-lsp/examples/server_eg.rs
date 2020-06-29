@@ -1,10 +1,54 @@
 use serde_json::Value;
-use tower_lsp::jsonrpc::Result;
+use tower_lsp::jsonrpc::{Error, Result};
 use tower_lsp::lsp_types::*;
+use tower_lsp::lsp_types::notification::Notification;
 use tower_lsp::{Client, LanguageServer, LspService, Server};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Default)]
 struct Backend;
+
+#[derive(Debug, Deserialize, Serialize)]
+struct CustomNotificationParams {
+    title: String,
+    message: String,
+}
+
+impl CustomNotificationParams {
+    fn new(title: impl Into<String>, message: impl Into<String>) -> Self {
+        CustomNotificationParams {
+            title: title.into(),
+            message: message.into(),
+        }
+    }
+}
+
+#[derive(Debug)]
+enum CustomNotification {}
+
+impl Notification for CustomNotification {
+    type Params = CustomNotificationParams;
+    const METHOD: &'static str = "custom/notification";
+}
+
+/*
+struct Res {
+    title: String,
+    message: String,
+}
+
+impl Res {
+    fn new(title: impl Into<String>, message: impl Into<String>) -> Self {
+        Res {
+            title: title.into(),
+            message: message.into(),
+        }
+}
+
+impl Res for Res {
+    
+}*/
+
 
 #[tower_lsp::async_trait]
 impl LanguageServer for Backend {
@@ -29,7 +73,7 @@ impl LanguageServer for Backend {
                 document_highlight_provider: Some(true),
                 workspace_symbol_provider: Some(true),
                 execute_command_provider: Some(ExecuteCommandOptions {
-                    commands: vec!["dummy.do_something".to_string()],
+                    commands: vec!["dummy.do_something".to_string(),"slang-ex.applyedit".to_string()],
                     work_done_progress_options: Default::default(),
                 }),
                 workspace: Some(WorkspaceCapability {
@@ -72,9 +116,26 @@ impl LanguageServer for Backend {
     async fn execute_command(
         &self,
         client: &Client,
-        _: ExecuteCommandParams,
+        params: ExecuteCommandParams,
     ) -> Result<Option<Value>> {
         client.log_message(MessageType::Info, "command executed!");
+
+        /*
+        if params.command == "slang-ex.applyedit" {
+            //client.send_custom_notificationCustomNotificationParams{
+            //    title: "Hello",
+            //    message: "Applied"
+            //};
+            client.apply_edit();
+            client.log_message(
+                MessageType::Info,
+                format!("Command executed with params: {:?}", params),
+            );
+            Ok(None)
+        }
+        else {
+            Err(Error::invalid_request())
+        }
 
         match client.apply_edit(WorkspaceEdit::default()).await {
             Ok(res) if res.applied => client.log_message(MessageType::Info, "edit applied"),
@@ -83,6 +144,20 @@ impl LanguageServer for Backend {
         }
 
         Ok(None)
+        */
+
+        if params.command == "slang-ex.applyedit" {
+            client.send_custom_notification::<CustomNotification>(CustomNotificationParams::new(
+                "Response", "From the server",
+            ));
+            client.log_message(
+                MessageType::Info,
+                format!("Command executed with params: {:?}", params),
+            );
+            Ok(None)
+        } else {
+            Err(Error::invalid_request())
+        }
     }
 
     async fn did_open(&self, client: &Client, _: DidOpenTextDocumentParams) {

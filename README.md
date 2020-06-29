@@ -1,31 +1,36 @@
-# slang-ex README
+# A Rust based LSP for Solidity using Solang compiler
 
-This is the README for your extension "slang-ex". After writing up a brief description, we recommend including the following sections.
+Currently a WIP project under the Hyperledger mentorship programme.
+To know more about the project head towards the [project bio](https://wiki.hyperledger.org/display/INTERN/Create+a+new+Solidity+Language+Server+%28SLS%29+using+Solang+Compiler) the project plan sits [here](https://wiki.hyperledger.org/pages/viewpage.action?pageId=31202927).
 
-## Features
+## To launch the LSP
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+### For use
 
-For example if there is an image subfolder under your extension project workspace:
+1. Inside a vscode instance, Ctrl+Shift+B to build the project.
+2. On the task bar at the bottom of the IDE select Launch Client.
+3. Open a Solidity file (.sol) to test the extension.
 
-\!\[feature X\]\(images/feature-x.png\)
+### For testing
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+1. Inside a vscode instance, Ctrl+Shift+B to build the project.
+2. On the task bar at the bottom of the IDE select Extensions tests.
+3. The result should be displayed in the debug console of the host IDE instance.
+
+## Developments till now
+
+1. Syntax highlighting.
+
+2. Grammer/Syntax completion for Solidity.
+
+3. A minimal LSP for req-response for file operations, hover requests, edits and much more to come.
+
+4. Tests for the commands(WIP).
 
 ## Requirements
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
-
-## Extension Settings
-
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
-
-For example:
-
-This extension contributes the following settings:
-
-* `myExtension.enable`: enable/disable this extension
-* `myExtension.thing`: set to `blah` to do something
+For requirements check out the package.json file for dependency and install them using npm.
+For LSP server cargo and rustc is a dependency.
 
 ## Known Issues
 

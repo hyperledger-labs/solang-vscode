@@ -7,7 +7,7 @@ import * as path from 'path';
 import * as cp from 'child_process';
 import * as rpc from 'vscode-jsonrpc';
 
-import { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind, InitializeRequest, InitializeParams, DefinitionRequest, Executable } from 'vscode-languageclient';
+import { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind, InitializeRequest, InitializeParams, DefinitionRequest, Executable, ApplyWorkspaceEditRequest } from 'vscode-languageclient';
 
 import { workspace, WorkspaceFolder } from 'vscode';
 import { create } from 'domain';
@@ -121,6 +121,28 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 	context.subscriptions.push(disposable1);
 
+	let disposable2 = vscode.commands.registerCommand('slang-ex.applyedit', () => {
+		//connection.sendNotification('something interesting');
+		//connection.sendRequest(InitializeRequest.type, init);
+		//connection.sendRequest(ApplyWorkspaceEditRequest.type, params);
+		
+		const { activeTextEditor } = vscode.window;
+
+		if (activeTextEditor && activeTextEditor.document.languageId === 'solidity'){
+			const {document} = activeTextEditor;
+			const frst = document.lineAt(0);
+
+			if(frst.text !=='42') {
+				const edit = new vscode.WorkspaceEdit();
+				edit.insert(document.uri, frst.range.start, '42\n');
+				console.log('sent edit request\n');
+				
+				return 	vscode.workspace.applyEdit(edit);
+			}
+		}
+	});
+	context.subscriptions.push(disposable2);
+
 	let disposable3 = vscode.languages.registerHoverProvider('solidity', {
 		provideHover(document, position, token) {
 			const range = document.getWordRangeAtPosition(position);
@@ -135,22 +157,7 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	});
 
-	/*
-	let disposable4 = vscode.commands.registerCommand('custom.notification', () => {
-		//connection.sendNotification('something interesting');
-		//connection.sendRequest(InitializeRequest.type, init);
-		console.log('running the command');
-		connection.sendRequest(DefinitionRequest.type, params);
-		console.log(connection);
-		console.log('sent request\n');
-	});
-	context.subscriptions.push(disposable4);
-	*/
-	
-
 	context.subscriptions.push(disposable3);
-
-	//let clientdispos;
 }
 
 // this method is called when your extension is deactivated
