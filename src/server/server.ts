@@ -2,10 +2,17 @@ import {
     createConnection,
     Diagnostic,
     Range,
-    DiagnosticSeverity
+    DiagnosticSeverity,
+    InitializeRequest,
+    InitializeResult,
+    InitializeParams,
+    DefinitionRequest,
+    RequestType,
+    TextDocument
 } from 'vscode-languageserver';
-import { ProposedFeatures } from 'vscode-languageclient';
+
 import * as rpc from 'vscode-jsonrpc';
+import { DocumentLink } from 'vscode';
 
 let connection = createConnection(
     new rpc.StreamMessageReader(process.stdin),
@@ -14,15 +21,18 @@ let connection = createConnection(
 
 //const connection = createConnection();
 
-connection.console.log(`Sample server running in node ${process.version}`);
+//connection.console.log(`Sample server running in node ${process.version}`);
 
-/*
-connection.onInitialize(() => {
-    return {
-        capabilities: null
+connection.onInitialize((params: InitializeParams) => {
+    const result: InitializeResult = {
+        capabilities: {},
     };
+    return result;
 });
-*/
+
+connection.onInitialized(() => {
+    connection.client.register(DefinitionRequest.type, undefined);
+});
 
 function validate(): void {
     connection.sendDiagnostics({

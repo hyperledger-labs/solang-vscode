@@ -7,18 +7,26 @@ import * as path from 'path';
 import * as cp from 'child_process';
 import * as rpc from 'vscode-jsonrpc';
 
-import { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind, InitializeRequest, InitializeParams } from 'vscode-languageclient';
+import { LanguageClient, 
+	LanguageClientOptions, 
+	ServerOptions, 
+	TransportKind, 
+	InitializeRequest, 
+	InitializeParams, 
+	DefinitionRequest, 
+	Executable 
+}from 'vscode-languageclient';
 
-import { workspace, WorkspaceFolder } from 'vscode';
-import { create } from 'domain';
-import { createConnection } from 'net';
+import { workspace, 
+	WorkspaceFolder 
+} from 'vscode';
+
 
 let diagcollect: vscode.DiagnosticCollection;
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
-	//const ws: WorkspaceFolder[] = workspace.workspaceFolders;
 
 	// Use the console to output diagnostic information (console.log) and errors (console.error)
 	// This line of code will only be executed once when your extension is activated
@@ -43,16 +51,15 @@ export function activate(context: vscode.ExtensionContext) {
 	let connection = rpc.createMessageConnection(
 		new rpc.StreamMessageReader(process.stdout),
 		new rpc.StreamMessageWriter(process.stdin)
-		//new rpc.SocketMessageReader(),
-		//new rpc.SocketMessageWriter()
 	);
 
-	//connection = createConnection(rpc.StreamMessageReader(), rpc.StreamMessageWriter(),);
 
 	connection.listen();
 
+	/*
 	const serverModule = context.asAbsolutePath(path.join('out', 'server', 'server.js'));
 	console.log(serverModule);
+
 	const serverOptions: ServerOptions = {
 		debug: {
 			module: serverModule,
@@ -63,9 +70,22 @@ export function activate(context: vscode.ExtensionContext) {
 		},
 		run: {
 			module: serverModule,
+
 			transport: TransportKind.ipc,
 		}
 	};
+	*/
+
+	const sop: Executable = {
+		command: 'cargo run',
+		args: ['--example', 'server_eg'],
+		options: {
+			cwd: './tower-lsp',
+			shell:true
+		}
+	};
+
+	const serverOptions: ServerOptions = sop;
 
 	const clientoptions: LanguageClientOptions = {
 		documentSelector: [
@@ -81,26 +101,60 @@ export function activate(context: vscode.ExtensionContext) {
 		workspaceFolders: null,
 	};
 
+	const params = {"textDocument": {"uri": "file://temp"},
+                 "position": {"line": 1, "character": 1}
+	};
+
+
+	let clientdispos = new LanguageClient(
+			'solidity',
+			'Soliditiy language server extension',
+			serverOptions,
+			clientoptions).start();
+	
+	context.subscriptions.push(clientdispos);
+	
+
 	let disposable1 = vscode.commands.registerCommand('slang-ex.sendfirstcode', () => {
-		connection.sendNotification('something interesting');
-		connection.sendRequest(InitializeRequest.type, init);
-		console.log(connection);
+		connection.sendRequest(DefinitionRequest.type, params);
 		console.log('sent request\n');
 	});
 	context.subscriptions.push(disposable1);
 
-	//let clientdispos;
+	let disposable2 = vscode.commands.registerCommand('slang-ex.applyedit', () => {
+		
+		const { activeTextEditor } = vscode.window;
 
-	//if(ws) {
-	let clientdispos = new LanguageClient(
-		'solidity',
-		'Soliditiy language server extension',
-		serverOptions,
-		clientoptions).start();
-	//}
-	context.subscriptions.push(clientdispos);
+		if (activeTextEditor && activeTextEditor.document.languageId === 'solidity'){
+			const {document} = activeTextEditor;
+			const frst = document.lineAt(0);
 
+			if(frst.text !=='42') {
+				const edit = new vscode.WorkspaceEdit();
+				edit.insert(document.uri, frst.range.start, '42\n');
+				console.log('sent edit request\n');
+				
+				return 	vscode.workspace.applyEdit(edit);
+			}
+		}
+	});
+	context.subscriptions.push(disposable2);
 
+	let disposable3 = vscode.languages.registerHoverProvider('solidity', {
+		provideHover(document, position, token) {
+			const range = document.getWordRangeAtPosition(position);
+			const word = document.getText(range);
+
+			if(true){
+				return new vscode.Hover({
+					language: "Solidity",
+					value: "Hover is working now"
+				});
+			}
+		}
+	});
+
+	context.subscriptions.push(disposable3);
 }
 
 // this method is called when your extension is deactivated

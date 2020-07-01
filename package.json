@@ -2,6 +2,7 @@
 	"name": "slang-ex",
 	"displayName": "slang_ex",
 	"description": "Solidity extension",
+	"publisher": "vscode",
 	"version": "0.0.1",
 	"engines": {
 		"vscode": "^1.43.0"
@@ -16,6 +17,9 @@
 	],
 	"main": "./out/client/extension.js",
 	"contributes": {
+		"capabilities": {
+			"hoverProvider": "true"
+		},
 		"languages": [
 			{
 				"id": "solidity",
@@ -37,6 +41,10 @@
 			{
 				"command": "slang-ex.sendfirstcode",
 				"title": "Send first code"
+			},
+			{
+				"command": "slang-ex.applyedit",
+				"title": "Apply edit"
 			}
 		],
 		"snippets": [
@@ -69,7 +77,7 @@
 		"@types/glob": "^7.1.1",
 		"@types/mocha": "^7.0.2",
 		"@types/node": "^12.12.0",
-		"@types/vscode": "^1.33.0",
+		"@types/vscode": "^1.43.0",
 		"@typescript-eslint/eslint-plugin": "^2.30.0",
 		"@typescript-eslint/parser": "^2.30.0",
 		"eslint": "^6.8.0",

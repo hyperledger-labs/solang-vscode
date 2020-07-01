@@ -5,8 +5,6 @@
 {
 	"version": "0.2.0",
 	"configurations": [
-
-
 		{
 			"name": "Run Extension",
 			"type": "extensionHost",
@@ -48,7 +46,7 @@
 		{
 			"type": "node",
 			"request": "attach",
-			"name": "Attach to Server 29199",
+			"name": "Attach to Server 6009",
 			"address": "localhost",
 			"protocol": "inspector",
 			"port": 6009,
