@@ -2,6 +2,7 @@ import * as assert from 'assert';
 
 import * as vscode from 'vscode';
 import { getDocUri, activate, doc, getedits } from './helper';
+import { get } from 'http';
 
 // You can import and use all API from the 'vscode' module
 // as well as import your extension to test it
@@ -27,5 +28,10 @@ async function testcommand(docUri: vscode.Uri){
 
 	let res = await getedits();
 
-	assert.equal(res.text, '42');
+	if(res){
+		assert.equal(res.text, '42');
+	}
+	else{
+		console.error('failed to initialize apply edit');
+	}
 }
