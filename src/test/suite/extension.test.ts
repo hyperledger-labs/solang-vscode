@@ -7,11 +7,12 @@ import { getDocUri, activate, doc, getedits } from './helper';
 // as well as import your extension to test it
 // import * as myExtension from '../../extension';
 
-suite('Extension Test Suite', () => {
+suite('Extension Test Suite', function () {
 	vscode.window.showInformationMessage('Start all tests.');
 
 	const docUri = getDocUri('applyedits.sol');
 
+	this.timeout(20000);
 	test('Testing for apply edit', async () => {
 		await testcommand(docUri);
 	});
@@ -24,5 +25,7 @@ async function testcommand(docUri: vscode.Uri){
 
 	let val = await vscode.commands.executeCommand('slang-ex.applyedit');
 
-	assert.equal(getedits(), '42\n');
+	let res = await getedits();
+
+	assert.equal(res.text, '42');
 }
