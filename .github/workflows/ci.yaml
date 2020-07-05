@@ -1,3 +1,5 @@
+name: Action for push requests
+
 on:
   push:
     branches:
@@ -21,6 +23,3 @@ jobs:
       uses: GabrielBB/xvfb-action@v1.2
       with:
         run: npm test
-
-test:
-  name: Solang test
