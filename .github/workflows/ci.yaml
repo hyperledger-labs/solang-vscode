@@ -1,15 +1,13 @@
 name: Action for push requests
 
-on:
-  push:
-    branches:
-      - master
+on: [push, pull_request]
 
 jobs:
   build:
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
+        node-version: [10.x, 12.x]
     runs-on: ${{ matrix.os }}
     steps:
     - name: Checkout
@@ -17,8 +15,9 @@ jobs:
     - name: Install Node.js
       uses: actions/setup-node@v1
       with:
-        node-version: [10.x, 12.x]
-    - run: npm install
+        node-version: ${{ matrix.node-version }}
+    - name: Npm install
+      run: npm install
     - name: Run tests
       uses: GabrielBB/xvfb-action@v1.2
       with:
