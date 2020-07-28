@@ -58,12 +58,12 @@ export function activate(context: vscode.ExtensionContext) {
 
 	const sop: Executable = {
 		command: 'cargo run',
-		args: ['--example', 'server_eg'],
 		options: {
-			cwd: './tower-lsp',
+			cwd: './solang-server',
 			shell:true
 		}
 	};
+	//		args: ['--example','server_eg'],
 
 	const serverOptions: ServerOptions = sop;
 
