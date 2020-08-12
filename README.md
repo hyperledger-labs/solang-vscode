@@ -21,11 +21,13 @@ To know more about the project head towards the [project bio](https://wiki.hyper
 
 1. Syntax highlighting.
 
-2. Grammer/Syntax completion for Solidity.
+2. Bracket completion for Solidity.
 
 3. A minimal LSP for req-response for file operations, hover requests, edits and much more to come.
 
-4. Tests for the commands(WIP).
+4. Tests for the commands.
+
+5. [Diagnostics](docs/diagnostics.md)
 
 ## Requirements
 
