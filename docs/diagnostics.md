@@ -34,7 +34,7 @@ Currently the extension comes with 4 diagnostics tests which tests the extension
 
 ### How to run these tests?
 1. Build the extension (Ctrl+Shift+B).
-2. Press F5 and from the bottom menu selecte "Extension tests".
+2. Press F5 and from the bottom menu select "Extension tests".
 The result should appear in the debug console.
 
 ### Testing the diagnostics
@@ -46,4 +46,4 @@ The result should appear in the debug console.
 ![Launching tests](gifs/diag-tests.gif)
 
 The server might take a few seconds to respond during file changes.
-We are working on more features, stay updated!
+We are working on more features, stay tuned!
