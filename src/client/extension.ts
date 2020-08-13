@@ -14,7 +14,8 @@ import { LanguageClient,
 	InitializeRequest, 
 	InitializeParams, 
 	DefinitionRequest, 
-	Executable 
+	Executable, 
+	ExecutableOptions
 }from 'vscode-languageclient';
 
 import { workspace, 
@@ -63,7 +64,6 @@ export function activate(context: vscode.ExtensionContext) {
 			shell:true
 		}
 	};
-	//		args: ['--example','server_eg'],
 
 	const serverOptions: ServerOptions = sop;
 

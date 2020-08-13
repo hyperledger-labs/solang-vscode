@@ -24,10 +24,9 @@ impl Backend {
         for (ind, c) in data.char_indices() {
             if c == '\n' {
                 line.push(ind);
-            } else {
-                if ind == data.chars().count() - 1 && c != '\n' {
-                    line.push(ind);
-                }
+            }
+            if ind == data.chars().count() - 1 && c != '\n' {
+                line.push(ind);
             }
         }
 
@@ -48,8 +47,8 @@ impl Backend {
                 r = mid - 1;
             }
         }
-        let col = val - line[count-1];
-        return (count, col - 1);
+        let col = val - line[count - 1];
+        (count, col - 1)
     }
 
     pub fn convert_diagnos(ns: ast::Namespace, filecache: &mut FileCache) -> Vec<Diagnostic> {
@@ -93,7 +92,7 @@ impl Backend {
             });
         }
 
-        return diagnostics_vec;
+        diagnostics_vec
     }
 }
 
@@ -233,8 +232,36 @@ impl LanguageServer for Backend {
         }
     }
 
-    async fn did_save(&self, client: &Client, _: DidSaveTextDocumentParams) {
+    async fn did_save(&self, client: &Client, params: DidSaveTextDocumentParams) {
         client.log_message(MessageType::Info, "file saved!");
+
+        let uri = params.text_document.uri;
+
+        if let Ok(path) = uri.to_file_path() {
+            let mut filecache = FileCache::new();
+
+            let filecachepath = path.parent().unwrap();
+
+            let tostrpath = filecachepath.to_str().unwrap();
+
+            let mut p = PathBuf::new();
+
+            p.push(tostrpath.to_string());
+
+            filecache.add_import_path(p);
+
+            let uri_string = uri.to_string();
+
+            client.log_message(MessageType::Info, &uri_string);
+
+            let os_str = path.file_name().unwrap();
+
+            let ns = parse_and_resolve(os_str.to_str().unwrap(), &mut filecache, Target::Ewasm);
+
+            let d = Backend::convert_diagnos(ns, &mut filecache);
+
+            client.publish_diagnostics(uri, d, None);
+        }
     }
 
     async fn did_close(&self, client: &Client, _: DidCloseTextDocumentParams) {

@@ -5,6 +5,8 @@ To know more about the project head towards the [project bio](https://wiki.hyper
 
 ## To launch the LSP
 
+![Sample Illustration](docs/gifs/diag-example.gif)
+
 ### For use
 
 1. Inside a vscode instance, Ctrl+Shift+B to build the project.
