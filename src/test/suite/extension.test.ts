@@ -41,7 +41,6 @@ suite('Extension Test Suite', function () {
 	const diagnosdoc3 = getDocUri('three.sol');
 	test('Testing for diagnostic info.', async () => {
 		await testdiagnos(diagnosdoc3,	[
-			{ message: "found contract ‘full_example’", range: toRange(7,0,181,0), severity: vscode.DiagnosticSeverity.Information, source: 'solidity'}
 		]);
 	});
 
@@ -50,7 +49,6 @@ suite('Extension Test Suite', function () {
 	test('Testing for diagnostics warnings.', async () => {
 		await testdiagnos(diagnosdoc4, [
 			{ message: 'unknown pragma ‘foo’ with value ‘bar’ ignored', range: toRange(0,7,0,14), severity: vscode.DiagnosticSeverity.Warning, source: `solidity`},
-			{ message: `found contract ‘a’` , range: toRange(2,0,7,0), severity: vscode.DiagnosticSeverity.Information, source: `solidity`},
 			{ message: 'function declared ‘nonpayable’ can be declared ‘pure’', range: toRange(3,5,5,6), severity: vscode.DiagnosticSeverity.Warning, source: `solidity`},
 		]);
 	});

@@ -1,9 +1,8 @@
 use tower_lsp::{LspService, Server};
 
-#[allow(non_snake_case)]
-mod ServerUtils;
+mod serverutils;
 
-use ServerUtils::Backend;
+use serverutils::Backend;
 
 #[tokio::main]
 async fn main() {

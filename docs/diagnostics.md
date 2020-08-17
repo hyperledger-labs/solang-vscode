@@ -16,20 +16,21 @@ specified file and performs two operations:
 
 The solang-server after recieving the diagnostics performs necessary 
 transforms like conversion of messages to LSP standard types, mapping of
-the line and coloumn of the messages with the file atlast forwrding it 
+the line and coloumn of the messages with the file finally forwarding it 
 to the client.
 
 ### Which properties are supported:
 1. Errors.
 2. Information.
 3. Warnings.
+4. Debug/Hints.
 
 ### Want to run some tests?
 Currently the extension comes with 4 diagnostics tests which tests the extension on:
 
 1. Coloum, Line alignment of diagnostics with respect to file.
 2. Checking for correct warnings.
-3. Checking for correct Information messages from the server.
+3. Checking for correct hint messages from the server.
 4. Checking for correct error messages from the server.
 
 ### How to run these tests?

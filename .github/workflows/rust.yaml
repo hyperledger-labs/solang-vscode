@@ -16,5 +16,7 @@ jobs:
           override: true
       - run: cargo build
         working-directory: solang-server
+      - run: cargo clippy
+        working-directory: solang-server
       - run: cargo fmt --all
         working-directory: solang-server
