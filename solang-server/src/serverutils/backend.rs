@@ -17,59 +17,37 @@ pub struct Backend {
     state: Vec<usize>,
 }
 
-#[warn(dead_code)]
 impl Backend {
-    pub fn search_line(data: &str, val: usize) -> (usize, usize) {
-        let mut line = Vec::new();
+    // Calculate the line and coloumn from the Loc offset recieved from the parser
+    // Do a linear search till the correct offset location is matched
+    fn file_offset_to_line_column(data: &str, loc: usize) -> (usize, usize) {
+        let mut line_no = 0;
+        let mut past_ch = 0;
+
         for (ind, c) in data.char_indices() {
             if c == '\n' {
-                line.push(ind);
+                if ind == loc {
+                    break;
+                } else {
+                    past_ch = ind + 1;
+                    line_no += 1;
+                }
             }
-            if ind == data.chars().count() - 1 && c != '\n' {
-                line.push(ind);
+            if ind == loc {
+                break;
             }
         }
 
-        let mut l = 0;
-        let mut r = line.len() - 1;
-
-        let mut count = 0;
-
-        if val <= line[0] {
-            return (0, val);
-        }
-        while l <= r {
-            let mid = (l + r) / 2;
-            if line[mid] < val {
-                count = mid + 1;
-                l = mid + 1;
-            } else {
-                r = mid - 1;
-            }
-        }
-        let col = val - line[count - 1];
-        (count, col - 1)
+        (line_no, loc - past_ch)
     }
 
-    pub fn convert_diagnos(ns: ast::Namespace, filecache: &mut FileCache) -> Vec<Diagnostic> {
+    // Convert the diagnostic messages recieved from the solang to lsp diagnostics types.
+    // Returns a vector of diagnostic messages for the client.
+    fn convert_to_diagnostics(ns: ast::Namespace, filecache: &mut FileCache) -> Vec<Diagnostic> {
         let mut diagnostics_vec: Vec<Diagnostic> = Vec::new();
 
         for diag in ns.diagnostics {
             let pos = diag.pos.unwrap();
-
-            let fl = &ns.files[pos.0];
-
-            let file_cont = filecache.get_file_contents(fl.as_str());
-
-            let l1 = Backend::search_line(&file_cont.as_str(), pos.1);
-
-            let l2 = Backend::search_line(&file_cont.as_str(), pos.2);
-
-            let p1 = Position::new(l1.0 as u64, l1.1 as u64);
-
-            let p2 = Position::new(l2.0 as u64, l2.1 as u64);
-
-            let range = Range::new(p1, p2);
 
             let diagnostic = &diag;
 
@@ -77,13 +55,28 @@ impl Backend {
                 ast::Level::Info => DiagnosticSeverity::Information,
                 ast::Level::Warning => DiagnosticSeverity::Warning,
                 ast::Level::Error => DiagnosticSeverity::Error,
+                ast::Level::Debug => continue,
             };
 
-            let message_slc = &diag.message[..];
+            let fl = &ns.files[pos.0];
+
+            let file_cont = filecache.get_file_contents(fl.as_str());
+
+            let l1 = Backend::file_offset_to_line_column(&file_cont.as_str(), pos.1);
+
+            let l2 = Backend::file_offset_to_line_column(&file_cont.as_str(), pos.2);
+
+            let p1 = Position::new(l1.0 as u64, l1.1 as u64);
+
+            let p2 = Position::new(l2.0 as u64, l2.1 as u64);
+
+            let range = Range::new(p1, p2);
+
+            let message_slice = &diag.message[..];
 
             diagnostics_vec.push(Diagnostic {
                 range,
-                message: message_slc.to_string(),
+                message: message_slice.to_string(),
                 severity: Some(sev),
                 source: Some("solidity".to_string()),
                 code: None,
@@ -194,7 +187,7 @@ impl LanguageServer for Backend {
 
             let ns = parse_and_resolve(os_str.to_str().unwrap(), &mut filecache, Target::Ewasm);
 
-            let d = Backend::convert_diagnos(ns, &mut filecache);
+            let d = Backend::convert_to_diagnostics(ns, &mut filecache);
 
             client.publish_diagnostics(uri, d, None);
         }
@@ -226,7 +219,7 @@ impl LanguageServer for Backend {
 
             let ns = parse_and_resolve(os_str.to_str().unwrap(), &mut filecache, Target::Ewasm);
 
-            let d = Backend::convert_diagnos(ns, &mut filecache);
+            let d = Backend::convert_to_diagnostics(ns, &mut filecache);
 
             client.publish_diagnostics(uri, d, None);
         }
@@ -258,7 +251,7 @@ impl LanguageServer for Backend {
 
             let ns = parse_and_resolve(os_str.to_str().unwrap(), &mut filecache, Target::Ewasm);
 
-            let d = Backend::convert_diagnos(ns, &mut filecache);
+            let d = Backend::convert_to_diagnostics(ns, &mut filecache);
 
             client.publish_diagnostics(uri, d, None);
         }
