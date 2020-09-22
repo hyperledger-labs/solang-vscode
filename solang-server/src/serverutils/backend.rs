@@ -12,6 +12,16 @@ use solang::sema::*;
 
 use std::path::PathBuf;
 
+use solang::*;
+
+use solang::sema::ast::*;
+
+use solang::parser::pt;
+
+use solang::sema::ast::Expression::*;
+
+use solang::sema::ast::Type;
+
 #[derive(Debug, Default)]
 pub struct Backend {
     state: Vec<usize>,
@@ -86,6 +96,693 @@ impl Backend {
         }
 
         diagnostics_vec
+    }
+
+    // Constructs the function type message which is returned as a String
+    fn construct_fnc(fnc_ty: &pt::FunctionTy) -> String {
+        let msg;
+        match fnc_ty {
+            pt::FunctionTy::Constructor => {
+                msg = String::from("Constructor");
+            }
+            pt::FunctionTy::Function => {
+                msg = String::from("Function");
+            }
+            pt::FunctionTy::Fallback => {
+                msg = String::from("Fallback");
+            }
+            pt::FunctionTy::Receive => {
+                msg = String::from("Recieve");
+            }
+            pt::FunctionTy::Modifier => {
+                msg = String::from("Modifier");
+            }
+        }
+        msg
+    }
+
+    // Constructs lookup table(messages) for the given statement by traversing the
+    // statements and traversing inside the contents of the statements.
+    fn construct_stmt(
+        stmt: &Statement,
+        lookup_tbl: &mut Vec<(u64, u64, String)>,
+        symtab: &sema::symtable::Symtable,
+        ns: &ast::Namespace,
+    ) {
+        match stmt {
+            Statement::VariableDecl(_locs, _, _param, expr) => {
+                if let Some(exp) = expr {
+                    Backend::construct_expr(exp, lookup_tbl, symtab, ns);
+                }
+            }
+            Statement::If(_locs, _, expr, stat1, stat2) => {
+                //let _if_msg = String::from("If(...)");
+                Backend::construct_expr(expr, lookup_tbl, symtab, ns);
+                for st1 in stat1 {
+                    Backend::construct_stmt(st1, lookup_tbl, symtab, ns);
+                }
+                for st2 in stat2 {
+                    Backend::construct_stmt(st2, lookup_tbl, symtab, ns);
+                }
+            }
+            Statement::While(_locs, _blval, expr, stat1) => {
+                Backend::construct_expr(expr, lookup_tbl, symtab, ns);
+                for st1 in stat1 {
+                    Backend::construct_stmt(st1, lookup_tbl, symtab, ns);
+                }
+            }
+            Statement::For {
+                loc: _,
+                reachable: _,
+                init,
+                cond,
+                next,
+                body,
+            } => {
+                if let Some(exp) = cond {
+                    Backend::construct_expr(exp, lookup_tbl, symtab, ns);
+                }
+                for stat in init {
+                    Backend::construct_stmt(stat, lookup_tbl, symtab, ns);
+                }
+                for stat in next {
+                    Backend::construct_stmt(stat, lookup_tbl, symtab, ns);
+                }
+                for stat in body {
+                    Backend::construct_stmt(stat, lookup_tbl, symtab, ns);
+                }
+            }
+            Statement::DoWhile(_locs, _blval, stat1, expr) => {
+                Backend::construct_expr(expr, lookup_tbl, symtab, ns);
+                for st1 in stat1 {
+                    Backend::construct_stmt(st1, lookup_tbl, symtab, ns);
+                }
+            }
+            Statement::Expression(_locs, _, expr) => {
+                Backend::construct_expr(expr, lookup_tbl, symtab, ns);
+            }
+            Statement::Delete(_locs, _typ, expr) => {
+                Backend::construct_expr(expr, lookup_tbl, symtab, ns);
+            }
+            Statement::Destructure(_locs, _vecdestrfield, expr) => {
+                Backend::construct_expr(expr, lookup_tbl, symtab, ns);
+            }
+            Statement::Continue(_locs) => {}
+            Statement::Break(_) => {}
+            Statement::Return(_locs, expr) => {
+                for expp in expr {
+                    Backend::construct_expr(expp, lookup_tbl, symtab, ns);
+                }
+            }
+            Statement::Emit {
+                loc: _,
+                event_no: _,
+                args,
+            } => {
+                for arg in args {
+                    Backend::construct_expr(arg, lookup_tbl, symtab, ns);
+                }
+            }
+            Statement::TryCatch {
+                loc: _,
+                reachable: _,
+                expr,
+                returns: _,
+                ok_stmt: _,
+                error: _,
+                catch_param: _,
+                catch_param_pos: _,
+                catch_stmt: _,
+            } => {
+                Backend::construct_expr(expr, lookup_tbl, symtab, ns);
+            }
+            Statement::Underscore(_loc) => {}
+        }
+    }
+
+    // Constructs lookup table(messages) by traversing over the expressions and storing
+    // the respective expression type messages in the table.
+    fn construct_expr(
+        expr: &Expression,
+        lookup_tbl: &mut Vec<(u64, u64, String)>,
+        symtab: &sema::symtable::Symtable,
+        ns: &ast::Namespace,
+    ) {
+        match expr {
+            FunctionArg(locs, typ, _sample_sz) => {
+                let _fnc_arg_typ = Backend::construct_fnc_type(typ, ns);
+                let msg = format!("function arg {}", _fnc_arg_typ);
+                lookup_tbl.push((locs.1 as u64, locs.2 as u64, msg));
+            }
+
+            // Variable types expression
+            BoolLiteral(locs, vl) => {
+                let msg = format!("(bool) {}", vl);
+                lookup_tbl.push((locs.1 as u64, locs.2 as u64, msg));
+            }
+            BytesLiteral(locs, typ, _vec_lst) => {
+                let _fnc_arg_typ = Backend::construct_fnc_type(typ, ns);
+                let msg = format!("({})", _fnc_arg_typ);
+                lookup_tbl.push((locs.1 as u64, locs.2 as u64, msg));
+            }
+            CodeLiteral(locs, _val, _) => {
+                let msg = format!("({})", _val);
+                lookup_tbl.push((locs.1 as u64, locs.2 as u64, msg));
+            }
+            NumberLiteral(locs, typ, _bgit) => {
+                let _fnc_arg_typ = Backend::construct_fnc_type(typ, ns);
+                let msg = format!("({})", _fnc_arg_typ);
+                lookup_tbl.push((locs.1 as u64, locs.2 as u64, msg));
+            }
+            StructLiteral(_locs, _typ, expr) => {
+                for expp in expr {
+                    Backend::construct_expr(expp, lookup_tbl, symtab, ns);
+                }
+            }
+            ArrayLiteral(_locs, _, _arr, expr) => {
+                for expp in expr {
+                    Backend::construct_expr(expp, lookup_tbl, symtab, ns);
+                }
+            }
+            ConstArrayLiteral(_locs, _, _arr, expr) => {
+                for expp in expr {
+                    Backend::construct_expr(expp, lookup_tbl, symtab, ns);
+                }
+            }
+
+            // Arithmetic expression
+            Add(_locs, _typ, expr1, expr2) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+                Backend::construct_expr(expr2, lookup_tbl, symtab, ns);
+            }
+            Subtract(_locs, _typ, expr1, expr2) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+                Backend::construct_expr(expr2, lookup_tbl, symtab, ns);
+            }
+            Multiply(_locs, _typ, expr1, expr2) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+                Backend::construct_expr(expr2, lookup_tbl, symtab, ns);
+            }
+            UDivide(_locs, _typ, expr1, expr2) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+                Backend::construct_expr(expr2, lookup_tbl, symtab, ns);
+            }
+            SDivide(_locs, _typ, expr1, expr2) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+                Backend::construct_expr(expr2, lookup_tbl, symtab, ns);
+            }
+            UModulo(_locs, _typ, expr1, expr2) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+                Backend::construct_expr(expr2, lookup_tbl, symtab, ns);
+            }
+            SModulo(_locs, _typ, expr1, expr2) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+                Backend::construct_expr(expr2, lookup_tbl, symtab, ns);
+            }
+            Power(_locs, _typ, expr1, expr2) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+                Backend::construct_expr(expr2, lookup_tbl, symtab, ns);
+            }
+
+            // Bitwise expresion
+            BitwiseOr(_locs, _typ, expr1, expr2) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+                Backend::construct_expr(expr2, lookup_tbl, symtab, ns);
+            }
+            BitwiseAnd(_locs, _typ, expr1, expr2) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+                Backend::construct_expr(expr2, lookup_tbl, symtab, ns);
+            }
+            BitwiseXor(_locs, _typ, expr1, expr2) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+                Backend::construct_expr(expr2, lookup_tbl, symtab, ns);
+            }
+            ShiftLeft(_locs, _typ, expr1, expr2) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+                Backend::construct_expr(expr2, lookup_tbl, symtab, ns);
+            }
+            ShiftRight(_locs, _typ, expr1, expr2, _bl) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+                Backend::construct_expr(expr2, lookup_tbl, symtab, ns);
+            }
+
+            // Variable expression
+            Variable(locs, typ, _val) => {
+                let typ_msg = Backend::construct_fnc_type(typ, ns);
+                let msg = format!("({})", typ_msg);
+                lookup_tbl.push((locs.1 as u64, locs.2 as u64, msg));
+            }
+            ConstantVariable(locs, typ, _val1, _val2) => {
+                let typ_msg = Backend::construct_fnc_type(typ, ns);
+
+                let msg = format!("({})", typ_msg);
+                lookup_tbl.push((locs.1 as u64, locs.2 as u64, msg));
+            }
+            StorageVariable(locs, typ, _val1, _val2) => {
+                let typ_msg = Backend::construct_fnc_type(typ, ns);
+                let msg = format!("({})", typ_msg);
+                lookup_tbl.push((locs.1 as u64, locs.2 as u64, msg));
+            }
+
+            // Load expression
+            Load(_locs, _typ, expr1) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+            }
+            StorageLoad(_locs, _typ, expr1) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+            }
+            ZeroExt(_locs, _typ, expr1) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+            }
+            SignExt(_locs, _typ, expr1) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+            }
+            Trunc(_locs, _typ, expr1) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+            }
+            Cast(_locs, _typ, expr1) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+            }
+            BytesCast(_loc, _typ1, _typ2, expr) => {
+                Backend::construct_expr(expr, lookup_tbl, symtab, ns);
+            }
+
+            //Increment-Decrement expression
+            PreIncrement(_locs, _typ, expr1) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+            }
+            PreDecrement(_locs, _typ, expr1) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+            }
+            PostIncrement(_locs, _typ, expr1) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+            }
+            PostDecrement(_locs, _typ, expr1) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+            }
+            Assign(_locs, _typ, expr1, expr2) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+                Backend::construct_expr(expr2, lookup_tbl, symtab, ns);
+            }
+
+            // Compare expression
+            UMore(_locs, expr1, expr2) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+                Backend::construct_expr(expr2, lookup_tbl, symtab, ns);
+            }
+            ULess(_locs, expr1, expr2) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+                Backend::construct_expr(expr2, lookup_tbl, symtab, ns);
+            }
+            UMoreEqual(_locs, expr1, expr2) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+                Backend::construct_expr(expr2, lookup_tbl, symtab, ns);
+            }
+            ULessEqual(_locs, expr1, expr2) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+                Backend::construct_expr(expr2, lookup_tbl, symtab, ns);
+            }
+            SMore(_locs, expr1, expr2) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+                Backend::construct_expr(expr2, lookup_tbl, symtab, ns);
+            }
+            SLess(_locs, expr1, expr2) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+                Backend::construct_expr(expr2, lookup_tbl, symtab, ns);
+            }
+            SMoreEqual(_locs, expr1, expr2) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+                Backend::construct_expr(expr2, lookup_tbl, symtab, ns);
+            }
+            SLessEqual(_locs, expr1, expr2) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+                Backend::construct_expr(expr2, lookup_tbl, symtab, ns);
+            }
+            Equal(_locs, expr1, expr2) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+                Backend::construct_expr(expr2, lookup_tbl, symtab, ns);
+            }
+            NotEqual(_locs, expr1, expr2) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+                Backend::construct_expr(expr2, lookup_tbl, symtab, ns);
+            }
+
+            Not(_locs, expr1) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+            }
+            Complement(_locs, _typ, expr1) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+            }
+            UnaryMinus(_locs, _typ, expr1) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+            }
+
+            Ternary(_locs, _typ, expr1, expr2, expr3) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+                Backend::construct_expr(expr2, lookup_tbl, symtab, ns);
+                Backend::construct_expr(expr3, lookup_tbl, symtab, ns);
+            }
+
+            ArraySubscript(_locs, _typ, expr1, expr2) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+                Backend::construct_expr(expr2, lookup_tbl, symtab, ns);
+            }
+
+            StructMember(_locs, _typ, expr1, _val) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+            }
+
+            // Array operation expression
+            AllocDynamicArray(_locs, _typ, expr1, _valvec) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+            }
+            DynamicArrayLength(_locs, expr1) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+            }
+            DynamicArraySubscript(_locs, _typ, expr1, expr2) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+                Backend::construct_expr(expr2, lookup_tbl, symtab, ns);
+            }
+            DynamicArrayPush(_locs, expr1, _typ, expr2) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+                Backend::construct_expr(expr2, lookup_tbl, symtab, ns);
+            }
+            DynamicArrayPop(_locs, expr1, _typ) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+            }
+            StorageBytesSubscript(_locs, expr1, expr2) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+                Backend::construct_expr(expr2, lookup_tbl, symtab, ns);
+            }
+            StorageBytesPush(_locs, expr1, expr2) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+                Backend::construct_expr(expr2, lookup_tbl, symtab, ns);
+            }
+            StorageBytesPop(_locs, expr1) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+            }
+            StorageBytesLength(_locs, expr1) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+            }
+
+            //String operations expression
+            StringCompare(_locs, _strloc1, _strloc2) => {
+                if let StringLocation::RunTime(expr1) = _strloc1 {
+                    Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+                }
+                if let StringLocation::RunTime(expr2) = _strloc1 {
+                    Backend::construct_expr(expr2, lookup_tbl, symtab, ns);
+                }
+            }
+            StringConcat(_locs, _typ, _strloc1, _strloc2) => {
+                if let StringLocation::RunTime(expr1) = _strloc1 {
+                    Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+                }
+                if let StringLocation::RunTime(expr2) = _strloc1 {
+                    Backend::construct_expr(expr2, lookup_tbl, symtab, ns);
+                }
+            }
+
+            Or(_locs, expr1, expr2) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+                Backend::construct_expr(expr2, lookup_tbl, symtab, ns);
+            }
+            And(_locs, expr1, expr2) => {
+                Backend::construct_expr(expr1, lookup_tbl, symtab, ns);
+                Backend::construct_expr(expr2, lookup_tbl, symtab, ns);
+            }
+
+            // Function call expression
+            InternalFunctionCall {
+                loc: _,
+                returns: _,
+                contract_no: _,
+                function_no: _,
+                signature: _,
+                args,
+            } => {
+                for expp in args {
+                    Backend::construct_expr(expp, lookup_tbl, symtab, ns);
+                }
+            }
+            ExternalFunctionCall {
+                loc: _,
+                returns: _,
+                contract_no: _,
+                function_no: _,
+                address,
+                args,
+                value,
+                gas,
+            } => {
+                Backend::construct_expr(address, lookup_tbl, symtab, ns);
+                for expp in args {
+                    Backend::construct_expr(expp, lookup_tbl, symtab, ns);
+                }
+
+                Backend::construct_expr(value, lookup_tbl, symtab, ns);
+                Backend::construct_expr(gas, lookup_tbl, symtab, ns);
+            }
+            ExternalFunctionCallRaw {
+                loc: _,
+                ty: _,
+                address,
+                args,
+                value,
+                gas,
+            } => {
+                Backend::construct_expr(args, lookup_tbl, symtab, ns);
+                Backend::construct_expr(address, lookup_tbl, symtab, ns);
+                Backend::construct_expr(value, lookup_tbl, symtab, ns);
+                Backend::construct_expr(gas, lookup_tbl, symtab, ns);
+            }
+            Constructor {
+                loc: _,
+                contract_no: _,
+                constructor_no: _,
+                args,
+                gas,
+                value,
+                salt,
+            } => {
+                Backend::construct_expr(gas, lookup_tbl, symtab, ns);
+                for expp in args {
+                    Backend::construct_expr(expp, lookup_tbl, symtab, ns);
+                }
+                if let Some(optval) = value {
+                    Backend::construct_expr(optval, lookup_tbl, symtab, ns);
+                }
+                if let Some(optsalt) = salt {
+                    Backend::construct_expr(optsalt, lookup_tbl, symtab, ns);
+                }
+            }
+
+            //Hash table operation expression
+            Keccak256(_locs, _typ, expr) => {
+                for expp in expr {
+                    Backend::construct_expr(expp, lookup_tbl, symtab, ns);
+                }
+                lookup_tbl.push((
+                    _locs.1 as u64,
+                    _locs.2 as u64,
+                    String::from("Keccak256 hash"),
+                ));
+            }
+
+            ReturnData(locs) => {
+                let msg = String::from("Return");
+                lookup_tbl.push((locs.1 as u64, locs.2 as u64, msg));
+            }
+            GetAddress(locs, _typ) => {
+                let msg = String::from("Get address");
+                lookup_tbl.push((locs.1 as u64, locs.2 as u64, msg));
+            }
+            Balance(_locs, _typ, expr) => {
+                Backend::construct_expr(expr, lookup_tbl, symtab, ns);
+            }
+            Builtin(_locs, _typ, _builtin, expr) => {
+                for expp in expr {
+                    Backend::construct_expr(expp, lookup_tbl, symtab, ns);
+                }
+            }
+            List(_locs, expr) => {
+                for expp in expr {
+                    Backend::construct_expr(expp, lookup_tbl, symtab, ns);
+                }
+            }
+            Poison => {}
+        }
+    }
+
+    // Constructs the expression data type messages and stores it in the lookup table
+    fn construct_fnc_type(fnc_typ: &ast::Type, ns: &ast::Namespace) -> String {
+        let msg;
+        match fnc_typ {
+            Type::Address(_bl) => {
+                if !(*_bl) {
+                    msg = String::from("address");
+                } else {
+                    msg = String::from("address payable");
+                }
+            }
+            Type::Bool => {
+                msg = String::from("bool");
+            }
+            Type::Int(_val) => {
+                msg = format!("int{}", *_val);
+            }
+            Type::Uint(_val) => {
+                msg = format!("uint{}", *_val);
+            }
+            Type::Bytes(_val) => {
+                msg = format!("bytes{}", *_val);
+            }
+            ast::Type::String => {
+                msg = String::from("string");
+            }
+            Type::DynamicBytes => {
+                msg = String::from("dynamic-sized bytes");
+            }
+            Type::Enum(_val) => {
+                let enmdcl = &ns.enums[*_val];
+                let mutmsg = &enmdcl.name.to_string();
+                if let Some(enmcnt) = &enmdcl.contract {
+                    msg = format!("enum {}.{}, ", enmcnt, mutmsg);
+                } else {
+                    msg = format!("enum {}, ", mutmsg);
+                }
+            }
+            Type::Struct(_val) => {
+                let strdcl = &ns.structs[*_val];
+                let mutmsg = strdcl.name.to_string();
+                if let Some(strcnt) = &strdcl.contract {
+                    msg = format!("struct {}.{}, ", strcnt, mutmsg);
+                } else {
+                    msg = format!("struct {}, ", mutmsg);
+                }
+            }
+            Type::Array(_typ, _bgint) => {
+                msg = format!(
+                    "{}{}",
+                    _typ.to_string(ns),
+                    _bgint
+                        .iter()
+                        .map(|l| match l {
+                            None => "[]".to_string(),
+                            Some(l) => format!("[{}]", l),
+                        })
+                        .collect::<String>()
+                );
+            }
+            Type::Mapping(_boxtyp1, _boxtyp2) => {
+                msg = format!(
+                    "mapping({} => {})",
+                    Backend::construct_fnc_type(_boxtyp1, ns),
+                    Backend::construct_fnc_type(_boxtyp2, ns)
+                );
+            }
+            Type::Contract(_val) => {
+                msg = format!("contract {}", ns.contracts[*_val].name);
+            }
+            Type::Ref(_boxtypref1) => {
+                msg = Backend::construct_fnc_type(_boxtypref1, ns);
+            }
+            Type::StorageRef(_boxtypref1) => {
+                let msg1 = Backend::construct_fnc_type(_boxtypref1, ns);
+                msg = format!("{} storage", msg1);
+            }
+            Type::Void => {
+                msg = String::from("void");
+            }
+            Type::Unreachable => {
+                msg = String::from("unreachable");
+            }
+        }
+        msg
+    }
+
+    // Constructs contract fields and stores it in the lookup table.
+    fn construct_cont(
+        contvar: &ContractVariable,
+        lookup_tbl: &mut Vec<(u64, u64, String)>,
+        samptb: &sema::symtable::Symtable,
+        ns: &ast::Namespace,
+    ) {
+        let msg_typ = Backend::construct_fnc_type(&contvar.ty, ns);
+        let msg = format!("{} {}", msg_typ, contvar.name);
+        lookup_tbl.push((contvar.loc.1 as u64, contvar.loc.2 as u64, msg));
+        if let Some(expr) = &contvar.initializer {
+            Backend::construct_expr(&expr, lookup_tbl, samptb, ns);
+        }
+    }
+
+    // Constructs struct fields and stores it in the lookup table.
+    fn construct_strct(
+        strfld: &Parameter,
+        lookup_tbl: &mut Vec<(u64, u64, String)>,
+        ns: &ast::Namespace,
+    ) {
+        let msg_typ = Backend::construct_fnc_type(&strfld.ty, ns);
+        let msg = format!("{} {}", msg_typ, strfld.name);
+        lookup_tbl.push((strfld.loc.1 as u64, strfld.loc.2 as u64, msg));
+    }
+
+    // Traverses namespace to build messages stored in the lookup table for hover feature.
+    fn traverse(ns: &ast::Namespace, lookup_tbl: &mut Vec<(u64, u64, String)>) {
+        for contrct in &ns.contracts {
+            for fnc in &contrct.functions {
+                let fnc_msg_type = Backend::construct_fnc(&fnc.ty);
+                lookup_tbl.push((fnc.loc.1 as u64, fnc.loc.1 as u64, fnc_msg_type));
+                for stmt in &fnc.body {
+                    Backend::construct_stmt(&stmt, lookup_tbl, &fnc.symtable, ns);
+                }
+            }
+            for varscont in &contrct.variables {
+                let samptb = symtable::Symtable::new();
+                Backend::construct_cont(varscont, lookup_tbl, &samptb, ns);
+            }
+        }
+        for strct in &ns.structs {
+            for filds in &strct.fields {
+                Backend::construct_strct(&filds, lookup_tbl, ns);
+            }
+        }
+    }
+
+    // Converts line, char position in a respective file to a file offset position of the same file.
+    fn line_char_to_offset(ln: u64, chr: u64, data: &str) -> u64 {
+        let mut line_no = 0;
+        let mut past_ch = 0;
+        let mut ofst = 0;
+        for (_ind, c) in data.char_indices() {
+            if line_no == ln && chr == past_ch {
+                ofst = _ind;
+                break;
+            }
+            if c == '\n' {
+                line_no += 1;
+                past_ch = 0;
+            } else {
+                past_ch += 1;
+            }
+        }
+        ofst as u64
+    }
+
+    // Searches the respective hover message from lookup table for the given mouse pointer.
+    fn get_hover_msg(offset: &u64, lookup_tbl: &[(u64, u64, String)]) -> String {
+        let mut res = format!(
+            "Either the code is incorrect or Feature not yet implemented for {} offset",
+            offset
+        );
+        for (_l1, r1, msg) in lookup_tbl {
+            if *_l1 <= *offset && *offset <= *r1 {
+                let new_msg = &msg[..];
+                res = new_msg.to_string();
+                break;
+            }
+        }
+        res
     }
 }
 
@@ -268,12 +965,60 @@ impl LanguageServer for Backend {
         ])))
     }
 
-    async fn hover(&self, _: HoverParams) -> Result<Option<Hover>> {
-        Ok(Some(Hover {
-            contents: HoverContents::Scalar(MarkedString::String(
-                "This is hover message from server!".to_string(),
-            )),
-            range: None,
-        }))
+    async fn hover(&self, hverparam: HoverParams) -> Result<Option<Hover>> {
+        let txtdoc = hverparam.text_document_position_params.text_document;
+        let pos = hverparam.text_document_position_params.position;
+
+        let uri = txtdoc.uri;
+
+        if let Ok(path) = uri.to_file_path() {
+            let mut filecache = FileCache::new();
+
+            let filecachepath = path.parent().unwrap();
+
+            let tostrpath = filecachepath.to_str().unwrap();
+
+            let mut p = PathBuf::new();
+
+            p.push(tostrpath.to_string());
+
+            filecache.add_import_path(p);
+
+            let _uri_string = uri.to_string();
+
+            let os_str = path.file_name().unwrap();
+
+            let ns = parse_and_resolve(os_str.to_str().unwrap(), &mut filecache, Target::Ewasm);
+
+            let mut lookup_tbl: Vec<(u64, u64, String)> = Vec::new();
+
+            Backend::traverse(&ns, &mut lookup_tbl);
+
+            let fl = &ns.files[0];
+
+            let file_cont = filecache.get_file_contents(fl.as_str());
+
+            let offst = Backend::line_char_to_offset(pos.line, pos.character, &file_cont.as_str()); // 0 based offset
+
+            let msg = Backend::get_hover_msg(&offst, &lookup_tbl);
+
+            let new_pos = (pos.line, pos.character);
+
+            let p1 = Position::new(pos.line as u64, pos.character as u64);
+            let p2 = Position::new(new_pos.0 as u64, new_pos.1 as u64);
+            let new_rng = Range::new(p1, p2);
+
+            Ok(Some(Hover {
+                contents: HoverContents::Scalar(MarkedString::String(msg)),
+                range: Some(new_rng),
+            }))
+        } else {
+            Ok(Some(Hover {
+                contents: HoverContents::Scalar(MarkedString::String(
+                    "Failed to render hover".to_string(),
+                )),
+                range: None,
+            }))
+        }
     }
 }

@@ -6,7 +6,7 @@ name: Rust
 jobs:
   build:
     name: Build and format
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
@@ -14,6 +14,7 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
+      - run: sudo apt install curl llvm-10-dev clang-10
       - run: cargo build
         working-directory: solang-server
       - run: cargo clippy
