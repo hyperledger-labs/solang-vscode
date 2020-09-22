@@ -31,6 +31,8 @@ To know more about the project head towards the [project bio](https://wiki.hyper
 
 5. [Diagnostics](docs/diagnostics.md)
 
+6. [Hover](docs/hover.md)
+
 ## Requirements
 
 For requirements check out the package.json file for dependency and install them using npm.

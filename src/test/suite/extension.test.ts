@@ -22,7 +22,7 @@ suite('Extension Test Suite', function () {
 	const diagnosdoc1 = getDocUri('one.sol');
 	test('Testing for Row and Col pos.', async () => {
 		await testdiagnos(diagnosdoc1, [
-			{ message: 'unrecognised token `dddddddddddd\', expected "abstract", "contract", "enum", "import", "interface", "library", "pragma", "struct", DocComment', range: toRange(2,4,2,16), severity: vscode.DiagnosticSeverity.Error, source: 'solidity'}
+			{ message: 'unrecognised token `dddddddddddd\', expected "abstract", "contract", "enum", "event", "import", "interface", "library", "pragma", "struct", DocComment', range: toRange(2,4,2,16), severity: vscode.DiagnosticSeverity.Error, source: 'solidity'}
 		]	
 		);
 	});
@@ -53,12 +53,46 @@ suite('Extension Test Suite', function () {
 		]);
 	});
 
+	// Tests for hover.
+	this.timeout(20000);
+	const hoverdoc1 = getDocUri('hover1.sol');
+	test('Testing for Hover.', async () => {
+		await testhover(hoverdoc1);
+	});
 });
 
 function toRange(lineno1: number, charno1: number, lineno2: number, charno2: number){
 	const start = new vscode.Position(lineno1, charno1);
 	const end = new vscode.Position(lineno2, charno2);
 	return new vscode.Range(start, end);
+}
+
+async function testhover(docUri: vscode.Uri){
+	await activate(docUri);
+
+	var pos1 = new vscode.Position(14, 39);
+
+	let actualhover = await vscode.commands.executeCommand('vscode.executeHoverProvider', docUri, pos1) as vscode.Hover[];
+
+	let contentarr1 = actualhover[0].contents as vscode.MarkdownString[];
+
+	assert.equal( contentarr1[0].value, 'mapping(address => uint256) pendingReturns');
+
+	var pos2 = new vscode.Position(36, 36);
+
+	let actualhover2 = await vscode.commands.executeCommand('vscode.executeHoverProvider', docUri, pos2) as vscode.Hover[];
+
+	let contentarr2 = actualhover2[0].contents as vscode.MarkdownString[];
+
+	assert.equal( contentarr2[0].value, 'Either the code is incorrect or Feature not yet implemented for 0 offset');
+
+	var pos3 = new vscode.Position(77, 15);
+
+	let actualhover3 = await vscode.commands.executeCommand('vscode.executeHoverProvider', docUri, pos3) as vscode.Hover[];
+
+	let contentarr3 = actualhover3[0].contents as vscode.MarkdownString[];
+
+	assert.equal( contentarr3[0].value, '(uint256 storage)');
 }
 
 async function testdiagnos(docUri: vscode.Uri, expecteddiag: vscode.Diagnostic[]){

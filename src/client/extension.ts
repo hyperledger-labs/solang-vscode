@@ -120,21 +120,6 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 	context.subscriptions.push(disposable2);
 
-	let disposable3 = vscode.languages.registerHoverProvider('solidity', {
-		provideHover(document, position, token) {
-			const range = document.getWordRangeAtPosition(position);
-			const word = document.getText(range);
-
-			if(true){
-				return new vscode.Hover({
-					language: "Solidity",
-					value: "Hover is working now"
-				});
-			}
-		}
-	});
-
-	context.subscriptions.push(disposable3);
 }
 
 // this method is called when your extension is deactivated
