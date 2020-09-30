@@ -12,7 +12,6 @@ bytes = "0.5"
 solang = { git= "https://github.com/hyperledger-labs/solang" }
 dashmap = "3.5.1"
 futures = { version = "0.3", features = ["compat"] }
-inkwell = { version = "0.1.0-llvm10sample", features = ["target-webassembly", "llvm10-0"] }
 jsonrpc-core = "14.0"
 jsonrpc-derive = "14.0"
 log = "0.4"

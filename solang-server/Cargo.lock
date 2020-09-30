@@ -1244,7 +1244,6 @@ dependencies = [
  "bytes",
  "dashmap",
  "futures 0.3.5",
- "inkwell",
  "jsonrpc-core",
  "jsonrpc-derive",
  "log",
