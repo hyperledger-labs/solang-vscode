@@ -20,8 +20,6 @@ use solang::parser::pt;
 
 use solang::sema::ast::Expression::*;
 
-use solang::sema::ast::Type;
-
 #[derive(Debug, Default)]
 pub struct Backend {
     state: Vec<usize>,
@@ -134,6 +132,8 @@ impl Backend {
                 if let Some(exp) = expr {
                     Backend::construct_expr(exp, lookup_tbl, symtab, ns);
                 }
+                let msg = (_param.ty).to_string(ns);
+                lookup_tbl.push((_param.loc.0 as u64, _param.loc.1 as u64, msg));
             }
             Statement::If(_locs, _, expr, stat1, stat2) => {
                 //let _if_msg = String::from("If(...)");
@@ -186,6 +186,14 @@ impl Backend {
             }
             Statement::Destructure(_locs, _vecdestrfield, expr) => {
                 Backend::construct_expr(expr, lookup_tbl, symtab, ns);
+                for vecstr in _vecdestrfield {
+                    match vecstr {
+                        DestructureField::Expression(expr) => {
+                            Backend::construct_expr( expr, lookup_tbl, symtab, ns);
+                        }
+                        _ => continue
+                    }
+                }
             }
             Statement::Continue(_locs) => {}
             Statement::Break(_) => {}
@@ -195,7 +203,7 @@ impl Backend {
                 }
             }
             Statement::Emit {
-                loc: _,
+                loc:_,
                 event_no: _,
                 args,
             } => {
@@ -208,14 +216,25 @@ impl Backend {
                 reachable: _,
                 expr,
                 returns: _,
-                ok_stmt: _,
-                error: _,
+                ok_stmt,
+                error,
                 catch_param: _,
                 catch_param_pos: _,
-                catch_stmt: _,
+                catch_stmt,
             } => {
                 Backend::construct_expr(expr, lookup_tbl, symtab, ns);
-            }
+                for vecstmt in catch_stmt {
+                    Backend::construct_stmt(vecstmt, lookup_tbl, symtab, ns);
+                }
+                for vecstmt in ok_stmt {
+                    Backend::construct_stmt(vecstmt, lookup_tbl, symtab, ns);
+                }
+                if let Some(okstmt) = error {
+                        for stmts in &okstmt.2 {
+                            Backend::construct_stmt( &stmts, lookup_tbl, symtab, ns);
+                        }
+                    }
+                }
             Statement::Underscore(_loc) => {}
         }
     }
@@ -230,8 +249,7 @@ impl Backend {
     ) {
         match expr {
             FunctionArg(locs, typ, _sample_sz) => {
-                let _fnc_arg_typ = Backend::construct_fnc_type(typ, ns);
-                let msg = format!("function arg {}", _fnc_arg_typ);
+                let msg = format!("function arg {}", typ.to_string(ns));
                 lookup_tbl.push((locs.1 as u64, locs.2 as u64, msg));
             }
 
@@ -241,8 +259,7 @@ impl Backend {
                 lookup_tbl.push((locs.1 as u64, locs.2 as u64, msg));
             }
             BytesLiteral(locs, typ, _vec_lst) => {
-                let _fnc_arg_typ = Backend::construct_fnc_type(typ, ns);
-                let msg = format!("({})", _fnc_arg_typ);
+                let msg = format!("({})", typ.to_string(ns));
                 lookup_tbl.push((locs.1 as u64, locs.2 as u64, msg));
             }
             CodeLiteral(locs, _val, _) => {
@@ -250,8 +267,7 @@ impl Backend {
                 lookup_tbl.push((locs.1 as u64, locs.2 as u64, msg));
             }
             NumberLiteral(locs, typ, _bgit) => {
-                let _fnc_arg_typ = Backend::construct_fnc_type(typ, ns);
-                let msg = format!("({})", _fnc_arg_typ);
+                let msg = format!("({})", typ.to_string(ns));
                 lookup_tbl.push((locs.1 as u64, locs.2 as u64, msg));
             }
             StructLiteral(_locs, _typ, expr) => {
@@ -328,19 +344,16 @@ impl Backend {
 
             // Variable expression
             Variable(locs, typ, _val) => {
-                let typ_msg = Backend::construct_fnc_type(typ, ns);
-                let msg = format!("({})", typ_msg);
+                let msg = format!("({})", typ.to_string(ns));
                 lookup_tbl.push((locs.1 as u64, locs.2 as u64, msg));
             }
             ConstantVariable(locs, typ, _val1, _val2) => {
-                let typ_msg = Backend::construct_fnc_type(typ, ns);
 
-                let msg = format!("({})", typ_msg);
+                let msg = format!("constant ({})", typ.to_string(ns));
                 lookup_tbl.push((locs.1 as u64, locs.2 as u64, msg));
             }
             StorageVariable(locs, typ, _val1, _val2) => {
-                let typ_msg = Backend::construct_fnc_type(typ, ns);
-                let msg = format!("({})", typ_msg);
+                let msg = format!("({})", typ.to_string(ns));
                 lookup_tbl.push((locs.1 as u64, locs.2 as u64, msg));
             }
 
@@ -614,93 +627,6 @@ impl Backend {
         }
     }
 
-    // Constructs the expression data type messages and stores it in the lookup table
-    fn construct_fnc_type(fnc_typ: &ast::Type, ns: &ast::Namespace) -> String {
-        let msg;
-        match fnc_typ {
-            Type::Address(_bl) => {
-                if !(*_bl) {
-                    msg = String::from("address");
-                } else {
-                    msg = String::from("address payable");
-                }
-            }
-            Type::Bool => {
-                msg = String::from("bool");
-            }
-            Type::Int(_val) => {
-                msg = format!("int{}", *_val);
-            }
-            Type::Uint(_val) => {
-                msg = format!("uint{}", *_val);
-            }
-            Type::Bytes(_val) => {
-                msg = format!("bytes{}", *_val);
-            }
-            ast::Type::String => {
-                msg = String::from("string");
-            }
-            Type::DynamicBytes => {
-                msg = String::from("dynamic-sized bytes");
-            }
-            Type::Enum(_val) => {
-                let enmdcl = &ns.enums[*_val];
-                let mutmsg = &enmdcl.name.to_string();
-                if let Some(enmcnt) = &enmdcl.contract {
-                    msg = format!("enum {}.{}, ", enmcnt, mutmsg);
-                } else {
-                    msg = format!("enum {}, ", mutmsg);
-                }
-            }
-            Type::Struct(_val) => {
-                let strdcl = &ns.structs[*_val];
-                let mutmsg = strdcl.name.to_string();
-                if let Some(strcnt) = &strdcl.contract {
-                    msg = format!("struct {}.{}, ", strcnt, mutmsg);
-                } else {
-                    msg = format!("struct {}, ", mutmsg);
-                }
-            }
-            Type::Array(_typ, _bgint) => {
-                msg = format!(
-                    "{}{}",
-                    _typ.to_string(ns),
-                    _bgint
-                        .iter()
-                        .map(|l| match l {
-                            None => "[]".to_string(),
-                            Some(l) => format!("[{}]", l),
-                        })
-                        .collect::<String>()
-                );
-            }
-            Type::Mapping(_boxtyp1, _boxtyp2) => {
-                msg = format!(
-                    "mapping({} => {})",
-                    Backend::construct_fnc_type(_boxtyp1, ns),
-                    Backend::construct_fnc_type(_boxtyp2, ns)
-                );
-            }
-            Type::Contract(_val) => {
-                msg = format!("contract {}", ns.contracts[*_val].name);
-            }
-            Type::Ref(_boxtypref1) => {
-                msg = Backend::construct_fnc_type(_boxtypref1, ns);
-            }
-            Type::StorageRef(_boxtypref1) => {
-                let msg1 = Backend::construct_fnc_type(_boxtypref1, ns);
-                msg = format!("{} storage", msg1);
-            }
-            Type::Void => {
-                msg = String::from("void");
-            }
-            Type::Unreachable => {
-                msg = String::from("unreachable");
-            }
-        }
-        msg
-    }
-
     // Constructs contract fields and stores it in the lookup table.
     fn construct_cont(
         contvar: &ContractVariable,
@@ -708,7 +634,7 @@ impl Backend {
         samptb: &sema::symtable::Symtable,
         ns: &ast::Namespace,
     ) {
-        let msg_typ = Backend::construct_fnc_type(&contvar.ty, ns);
+        let msg_typ = &contvar.ty.to_string(ns);
         let msg = format!("{} {}", msg_typ, contvar.name);
         lookup_tbl.push((contvar.loc.1 as u64, contvar.loc.2 as u64, msg));
         if let Some(expr) = &contvar.initializer {
@@ -722,7 +648,7 @@ impl Backend {
         lookup_tbl: &mut Vec<(u64, u64, String)>,
         ns: &ast::Namespace,
     ) {
-        let msg_typ = Backend::construct_fnc_type(&strfld.ty, ns);
+        let msg_typ = &strfld.ty.to_string(ns);
         let msg = format!("{} {}", msg_typ, strfld.name);
         lookup_tbl.push((strfld.loc.1 as u64, strfld.loc.2 as u64, msg));
     }
