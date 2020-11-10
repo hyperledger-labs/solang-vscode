@@ -9,7 +9,7 @@ edition = "2018"
 [dependencies]
 async-trait = "0.1"
 bytes = "0.5"
-solang = { git= "https://github.com/hyperledger-labs/solang" }
+solang = { git="https://github.com/hyperledger-labs/solang.git" , rev = "91290e6c3a667f4abe473d516c0f1910888085ce" }
 dashmap = "3.5.1"
 futures = { version = "0.3", features = ["compat"] }
 jsonrpc-core = "14.0"

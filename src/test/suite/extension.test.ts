@@ -70,29 +70,29 @@ function toRange(lineno1: number, charno1: number, lineno2: number, charno2: num
 async function testhover(docUri: vscode.Uri){
 	await activate(docUri);
 
-	var pos1 = new vscode.Position(14, 39);
+	var pos1 = new vscode.Position(74, 14);
 
 	let actualhover = await vscode.commands.executeCommand('vscode.executeHoverProvider', docUri, pos1) as vscode.Hover[];
 
 	let contentarr1 = actualhover[0].contents as vscode.MarkdownString[];
 
-	assert.equal( contentarr1[0].value, 'mapping(address => uint256) pendingReturns');
+	assert.equal( contentarr1[0].value, '(mapping(address => uint256))');
 
-	var pos2 = new vscode.Position(36, 36);
+	var pos2 = new vscode.Position(78, 19);
 
 	let actualhover2 = await vscode.commands.executeCommand('vscode.executeHoverProvider', docUri, pos2) as vscode.Hover[];
 
 	let contentarr2 = actualhover2[0].contents as vscode.MarkdownString[];
 
-	assert.equal( contentarr2[0].value, 'Either the code is incorrect or Feature not yet implemented for 0 offset');
+	assert.equal( contentarr2[0].value, ' event HighestBidIncreased ( address bidder, \n\n uint256 amount, \n\n )');
 
-	var pos3 = new vscode.Position(77, 15);
+	var pos3 = new vscode.Position(53, 13);
 
 	let actualhover3 = await vscode.commands.executeCommand('vscode.executeHoverProvider', docUri, pos3) as vscode.Hover[];
 
 	let contentarr3 = actualhover3[0].contents as vscode.MarkdownString[];
 
-	assert.equal( contentarr3[0].value, '(uint256 storage)');
+	assert.equal( contentarr3[0].value, '[built-in]  void require (bool): Abort execution if argument evaulates to false');
 }
 
 async function testdiagnos(docUri: vscode.Uri, expecteddiag: vscode.Diagnostic[]){
