@@ -93,7 +93,7 @@ export function activate(context: vscode.ExtensionContext) {
 			clientoptions).start();
 	
 	context.subscriptions.push(clientdispos);
-	
+
 
 	let disposable1 = vscode.commands.registerCommand('slang-ex.sendfirstcode', () => {
 		connection.sendRequest(DefinitionRequest.type, params);

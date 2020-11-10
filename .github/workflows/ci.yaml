@@ -18,7 +18,5 @@ jobs:
         node-version: ${{ matrix.node-version }}
     - name: Npm install
       run: npm install
-    - name: Run tests
-      uses: GabrielBB/xvfb-action@v1.2
-      with:
-        run: npm test
+    - name: Compile
+      run: npm run compile
